@@ -5,6 +5,8 @@ import Link from "next/link";
 import type { MessageDTO, SessionDTO } from "@/lib/session-dto";
 import type { FeedbackDTO } from "@/lib/feedback";
 import { usePref } from "@/lib/use-pref";
+import { openAIKeyHeaders } from "@/lib/byok";
+import ApiKeyNotice from "@/components/ApiKeyNotice";
 import MessageFeedback from "@/components/MessageFeedback";
 import ScenarioIcon from "@/components/ScenarioIcon";
 import { Wave } from "@/components/HeroDemo";
@@ -104,7 +106,7 @@ function ChatRoomInner({
     try {
       const res = await fetch(`/api/sessions/${session.id}/messages`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...openAIKeyHeaders() },
         body: JSON.stringify({
           content,
           inputType: fromVoice ? "voice" : "text",
@@ -272,6 +274,7 @@ function ChatRoomInner({
       {/* ---------- 輸入區 ---------- */}
       <footer className="border-t border-line bg-paper/95 backdrop-blur-md">
         <div className="mx-auto w-full max-w-3xl px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6 sm:pt-4 sm:pb-5">
+          {isActive && <ApiKeyNotice className="mb-3" />}
           {error && (
             <p
               role="alert"

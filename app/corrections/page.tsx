@@ -7,6 +7,7 @@ import { formatDateTime } from "@/lib/format";
 import { CorrectionModel } from "@/models/Correction";
 import { PracticeSessionModel } from "@/models/PracticeSession";
 import SiteHeader from "@/components/SiteHeader";
+import ApiKeyNotice from "@/components/ApiKeyNotice";
 import { PlayButton, SpeakerProvider } from "@/components/Speaker";
 import ScenarioIcon from "@/components/ScenarioIcon";
 import { highlight } from "@/components/highlight";
@@ -76,6 +77,7 @@ export default async function CorrectionsPage(props: PageProps<"/corrections">) 
               練習時按過「糾正文法」「更好的回答」的結果都收在這裡。紅筆是說錯的地方，螢光筆是該記住的說法，每句都能按下去聽。
             </p>
           </header>
+          <ApiKeyNotice className="mt-6" />
 
           <nav
             className="mt-8 inline-flex max-w-full gap-1 overflow-x-auto rounded-full border border-line bg-surface p-1"

@@ -1,7 +1,7 @@
 import { isValidObjectId } from "mongoose";
 import { connectDB } from "@/lib/mongodb";
 import { getScenario, type Scenario } from "@/lib/scenarios";
-import { AIError, createStructured } from "@/lib/ai";
+import { AIError, createStructured, missingApiKey } from "@/lib/ai";
 import { PracticeSessionModel } from "@/models/PracticeSession";
 import {
   CorrectionModel,
@@ -13,7 +13,7 @@ import {
 } from "@/models/Correction";
 
 // 使用者按下「糾正文法」「更好的回答」時的共用邏輯：
-// 找到那句話 → 已經有結果就直接回傳 → 沒有就問 OpenAI → 存進 corrections → 回傳給前端
+// 找到那句話 → 已經有結果就直接回傳 → 沒有就用使用者的金鑰問 OpenAI → 存進 corrections → 回傳給前端
 
 export type FeedbackDTO = {
   id: string;
@@ -143,6 +143,7 @@ function severityFor(issueCount: number): Severity {
 }
 
 async function generate(
+  apiKey: string,
   kind: CorrectionKind,
   scenario: Scenario,
   aiLine: string | undefined,
@@ -152,6 +153,7 @@ async function generate(
 
   if (kind === "correction") {
     const r = await createStructured<GrammarResult>(
+      apiKey,
       GRAMMAR_INSTRUCTIONS,
       input,
       "grammar_check",
@@ -168,6 +170,7 @@ async function generate(
   }
 
   const r = await createStructured<BetterAnswerResult>(
+    apiKey,
     BETTER_ANSWER_INSTRUCTIONS,
     input,
     "better_answer",
@@ -184,12 +187,14 @@ async function generate(
 }
 
 // 給兩個 API route 共用，回傳要送給前端的 Response。
-// userId 由 route 從登入 session 取得；所有查詢都帶 userId，只能操作自己的練習
+// userId 由 route 從登入 session 取得；所有查詢都帶 userId，只能操作自己的練習。
+// apiKey 是使用者的 OpenAI 金鑰，只有還沒產生過、真的要問 AI 時才需要
 export async function handleFeedbackRequest(
   kind: CorrectionKind,
   userId: string,
   sessionId: string,
   messageId: string,
+  apiKey: string | null,
 ): Promise<Response> {
   if (!isValidObjectId(sessionId) || !isValidObjectId(messageId)) {
     return Response.json({ error: "找不到這句話" }, { status: 404 });
@@ -214,6 +219,8 @@ export async function handleFeedbackRequest(
     return Response.json({ error: "找不到這個練習場景" }, { status: 400 });
   }
 
+  if (!apiKey) return missingApiKey();
+
   // 使用者這句話是在回答 AI 的哪一句
   const aiLine = session.messages
     .slice(0, index)
@@ -221,7 +228,7 @@ export async function handleFeedbackRequest(
 
   let result: Awaited<ReturnType<typeof generate>>;
   try {
-    result = await generate(kind, scenario, aiLine, message.content);
+    result = await generate(apiKey, kind, scenario, aiLine, message.content);
   } catch (err) {
     const msg = err instanceof AIError ? err.message : "AI 服務發生錯誤";
     if (!(err instanceof AIError)) console.error(err);

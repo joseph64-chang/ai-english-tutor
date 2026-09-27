@@ -2,7 +2,8 @@ import "server-only";
 import { AIError, ensureOk, type ChatTurn, type SpeechAudio } from "@/lib/ai-types";
 
 // OpenAI 版本：直接用 fetch 呼叫 OpenAI API（不另外裝 SDK）。
-// 其他程式不要直接 import 這裡，請用 lib/ai.ts（會依設定切換 OpenAI / Gemini）。
+// 其他程式不要直接 import 這裡，請用 lib/ai.ts。
+// 金鑰是使用者自己的（BYOK），每個函式由呼叫端傳入，這裡不讀環境變數。
 
 // 要換模型改這裡就好
 export const CHAT_MODEL = "gpt-5.4-mini";
@@ -16,33 +17,24 @@ type ResponsesResult = {
   }[];
 };
 
-// 金鑰讀 OPENAI_API_KEY（也接受 OPEN_AI_API_KEY 這個寫法）
-export function getOpenAIKey() {
-  return (process.env.OPENAI_API_KEY ?? process.env.OPEN_AI_API_KEY)?.trim() || undefined;
-}
-
-function requireKey() {
-  const key = getOpenAIKey();
-  if (!key) throw new AIError("伺服器沒有設定 OPENAI_API_KEY");
-  return key;
-}
-
 // 一般對話：回傳 AI 說的一段文字
 export function createReply(
+  apiKey: string,
   instructions: string,
   input: ChatTurn[] | string,
 ): Promise<string> {
-  return callResponses({ instructions, input });
+  return callResponses(apiKey, { instructions, input });
 }
 
 // 結構化輸出：要求 AI 照 JSON Schema 回傳，解析後交給呼叫端
 export async function createStructured<T>(
+  apiKey: string,
   instructions: string,
   input: string,
   name: string,
   schema: Record<string, unknown>,
 ): Promise<T> {
-  const text = await callResponses({
+  const text = await callResponses(apiKey, {
     instructions,
     input,
     text: { format: { type: "json_schema", name, schema, strict: true } },
@@ -55,7 +47,11 @@ export async function createStructured<T>(
 }
 
 // 語音轉文字。prompt 放對話上下文，可以提高辨識準確度
-export async function transcribeAudio(file: File, prompt?: string): Promise<string> {
+export async function transcribeAudio(
+  apiKey: string,
+  file: File,
+  prompt?: string,
+): Promise<string> {
   const form = new FormData();
   form.append("file", file);
   form.append("model", TRANSCRIBE_MODEL);
@@ -65,7 +61,7 @@ export async function transcribeAudio(file: File, prompt?: string): Promise<stri
 
   const res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
     method: "POST",
-    headers: { Authorization: `Bearer ${requireKey()}` },
+    headers: { Authorization: `Bearer ${apiKey}` },
     body: form,
     signal: AbortSignal.timeout(60_000),
   });
@@ -80,6 +76,7 @@ const LEARNER_PACE =
 
 // 文字轉語音：回傳 mp3 串流，route 直接轉給瀏覽器播放
 export async function synthesizeSpeech(
+  apiKey: string,
   text: string,
   voice: string,
   style: string,
@@ -88,7 +85,7 @@ export async function synthesizeSpeech(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${requireKey()}`,
+      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
       model: TTS_MODEL,
@@ -104,12 +101,12 @@ export async function synthesizeSpeech(
   return { body: res.body, contentType: "audio/mpeg" };
 }
 
-async function callResponses(params: Record<string, unknown>): Promise<string> {
+async function callResponses(apiKey: string, params: Record<string, unknown>): Promise<string> {
   const res = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${requireKey()}`,
+      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
       model: CHAT_MODEL,

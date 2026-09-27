@@ -7,6 +7,7 @@ const NAV = [
   { href: "/practice", label: "練習" },
   { href: "/history", label: "練習紀錄" },
   { href: "/corrections", label: "糾錯紀錄" },
+  { href: "/settings", label: "設定" },
 ] as const;
 
 export default async function SiteHeader({ active }: { active: (typeof NAV)[number]["href"] }) {

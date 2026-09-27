@@ -1,4 +1,4 @@
-import { AIError, transcribeAudio } from "@/lib/ai";
+import { AIError, getRequestApiKey, missingApiKey, transcribeAudio } from "@/lib/ai";
 import { getUserIdFromRequest, unauthorized } from "@/lib/dal";
 
 // 錄音上限：一句話 60 秒的 webm/opus 大約只有幾百 KB，10MB 綽綽有餘
@@ -14,10 +14,11 @@ const EXTENSIONS: Record<string, string> = {
   "audio/x-m4a": "m4a",
 };
 
-// 口說輸入：前端上傳一段錄音 → AI（OpenAI 或 Gemini）轉成英文文字 → 回傳 { text }
+// 口說輸入：前端上傳一段錄音 → 用使用者的 OpenAI 金鑰轉成英文文字 → 回傳 { text }
 export async function POST(request: Request) {
-  // 語音辨識要花 OpenAI 的錢，只給登入的使用者用
   if (!(await getUserIdFromRequest())) return unauthorized();
+  const apiKey = getRequestApiKey(request);
+  if (!apiKey) return missingApiKey();
 
   let form: FormData;
   try {
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
 
   try {
     const file = new File([audio], `speech.${ext}`, { type: mime });
-    const text = await transcribeAudio(file, prompt);
+    const text = await transcribeAudio(apiKey, file, prompt);
     if (!text) {
       return Response.json({ error: "沒有聽到說話聲，請再說一次" }, { status: 422 });
     }

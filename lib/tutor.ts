@@ -24,14 +24,15 @@ Rules:
 }
 
 // 開場：AI 先用角色身分說第一句，並問一個問題
-export function createOpeningLine(scenario: Scenario) {
+export function createOpeningLine(apiKey: string, scenario: Scenario) {
   return createReply(
+    apiKey,
     buildInstructions(scenario),
     "Start the conversation now with your first line in character. Greet the learner and ask them one question.",
   );
 }
 
 // 依照目前的完整對話，產生 AI 的下一句
-export function createTutorReply(scenario: Scenario, history: ChatTurn[]) {
-  return createReply(buildInstructions(scenario), history.slice(-MAX_HISTORY));
+export function createTutorReply(apiKey: string, scenario: Scenario, history: ChatTurn[]) {
+  return createReply(apiKey, buildInstructions(scenario), history.slice(-MAX_HISTORY));
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { FeedbackDTO } from "@/lib/feedback";
+import { openAIKeyHeaders } from "@/lib/byok";
 import { PlayButton } from "@/components/Speaker";
 import { highlight } from "@/components/highlight";
 
@@ -78,7 +79,7 @@ export default function MessageFeedback({
     try {
       const res = await fetch(
         `/api/sessions/${sessionId}/messages/${messageId}/${path}`,
-        { method: "POST" },
+        { method: "POST", headers: openAIKeyHeaders() },
       );
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.error ?? "取得建議失敗，請再試一次");

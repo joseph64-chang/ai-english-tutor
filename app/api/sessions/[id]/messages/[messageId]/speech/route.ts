@@ -7,7 +7,7 @@ import { PracticeSessionModel } from "@/models/PracticeSession";
 
 // 朗讀 AI 的一句回覆（聽力練習），用該場景角色的聲音。回傳音檔
 export async function GET(
-  _request: Request,
+  request: Request,
   ctx: RouteContext<"/api/sessions/[id]/messages/[messageId]/speech">,
 ) {
   const userId = await getUserIdFromRequest();
@@ -31,8 +31,9 @@ export async function GET(
 
   const scenario = getScenario(session.topic);
   return speechResponse(
+    request,
     message.content,
-    scenario?.voices ?? { openai: "alloy", gemini: "Kore" },
+    scenario?.voice ?? "alloy",
     scenario?.voiceStyle ?? "",
   );
 }

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import ScenarioIcon from "@/components/ScenarioIcon";
+import ApiKeyNotice from "@/components/ApiKeyNotice";
+import { openAIKeyHeaders } from "@/lib/byok";
 
 type ScenarioCard = {
   id: string;
@@ -27,7 +29,7 @@ export default function ScenarioPicker({
     try {
       const res = await fetch("/api/sessions", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...openAIKeyHeaders() },
         body: JSON.stringify({ scenarioId }),
       });
       const data = await res.json().catch(() => null);
@@ -43,6 +45,7 @@ export default function ScenarioPicker({
 
   return (
     <div>
+      <ApiKeyNotice className="mb-6" />
       {error && (
         <p
           role="alert"

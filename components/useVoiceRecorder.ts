@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { openAIKeyHeaders } from "@/lib/byok";
 
 // 一次最多錄這麼久，時間到自動停止並送去辨識
 export const MAX_RECORDING_SECONDS = 60;
@@ -48,7 +49,11 @@ export function useVoiceRecorder({
       const context = callbacks.current.getContext?.();
       if (context) form.append("context", context);
 
-      const res = await fetch("/api/transcribe", { method: "POST", body: form });
+      const res = await fetch("/api/transcribe", {
+        method: "POST",
+        headers: openAIKeyHeaders(),
+        body: form,
+      });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.error ?? "語音辨識失敗，請再試一次");
       callbacks.current.onText(data.text);

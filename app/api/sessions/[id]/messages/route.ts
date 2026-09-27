@@ -4,7 +4,7 @@ import { getUserIdFromRequest, unauthorized } from "@/lib/dal";
 import { getScenario } from "@/lib/scenarios";
 import { toMessageDTO } from "@/lib/session-dto";
 import { createTutorReply, MAX_MESSAGE_LENGTH } from "@/lib/tutor";
-import { AIError } from "@/lib/ai";
+import { AIError, getRequestApiKey, missingApiKey } from "@/lib/ai";
 import { PracticeSessionModel } from "@/models/PracticeSession";
 
 // 使用者送出一句英文 → AI 用場景人設回應 → 兩句一起存進這場練習 → 回傳給前端
@@ -19,6 +19,9 @@ export async function POST(
   if (!isValidObjectId(id)) {
     return Response.json({ error: "找不到這場練習" }, { status: 404 });
   }
+
+  const apiKey = getRequestApiKey(request);
+  if (!apiKey) return missingApiKey();
 
   const body = await request.json().catch(() => null);
   const content = typeof body?.content === "string" ? body.content.trim() : "";
@@ -55,7 +58,7 @@ export async function POST(
 
   let reply: string;
   try {
-    reply = await createTutorReply(scenario, history);
+    reply = await createTutorReply(apiKey, scenario, history);
   } catch (err) {
     // AI 失敗就兩句都不存，前端可以直接重送同一句
     const message = err instanceof AIError ? err.message : "AI 服務發生錯誤";
